@@ -1,8 +1,7 @@
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import { PixabayAPI } from './pixabay-app.js';
 import { createMarkUp } from './createmarkup.js';
-import SimpleLightbox from 'simplelightbox';
-import 'simplelightbox/dist/simple-lightbox.min.css';
+
 const refs = {
   form: document.querySelector('.search-form'),
   input: document.querySelector('.js-searh-form'),
@@ -36,17 +35,26 @@ async function handleSubmit(event) {
   pixabayAPI.q = searchQuery;
   if (!searchQuery) {
     list.innerHTML = '';
-    return alert('your query is empty');
+    return Notify.failure('Sorry! Your query is empty. Please, try again.');
   }
 
   try {
     const response = await pixabayAPI.getPhotos();
-    console.log(` we find ${Math.ceil(response.data.total / 40)} page`);
+
+    if (response.data.total) {
+      Notify.success(` we find ${Math.ceil(response.data.total / 40)} page`);
+    } else {
+      Notify.failure(`Sorry! We didn't find your query. Please, try again.`);
+    }
+
     list.innerHTML = createMarkUp(response.data.hits);
+
     if (response.data.hits.length === 0) {
       list.innerHTML = '';
-      observe.unobserve(anchor);
+
+      observer.unobserve(anchor);
     }
+
     if (response.data.total > pixabayAPI.perPage) {
       observer.observe(anchor);
     }
@@ -56,27 +64,17 @@ async function handleSubmit(event) {
 }
 async function loadMoreData() {
   try {
+    pixabayAPI.page += 1;
     if (pixabayAPI.page > 1) {
       const response = await pixabayAPI.getPhotos();
       list.insertAdjacentHTML('beforeend', createMarkUp(response.data.hits));
 
-      console.log();
       if (Math.ceil(response.data.total / 40) === pixabayAPI.page) {
         observer.unobserve(anchor);
-        return alert('the end');
+        return Notify.success('The end of search.');
       }
     }
-
-    pixabayAPI.page += 1;
   } catch (error) {
     console.log(error);
   }
 }
-
-const lightbox = new SimpleLightbox('.gallery a', {
-  captions: true,
-  captionType: 'attr',
-  captionsData: 'alt',
-  captionPosition: 'bottom',
-  captionDelay: 250,
-});
