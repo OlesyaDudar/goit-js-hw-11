@@ -2,6 +2,8 @@ import { Notify } from 'notiflix/build/notiflix-notify-aio';
 import { PixabayAPI } from './pixabay-app.js';
 import { createMarkUp } from './createmarkup.js';
 
+const DEFAULT_PER_PAGE = 40;
+
 const refs = {
   form: document.querySelector('.search-form'),
   input: document.querySelector('.js-searh-form'),
@@ -25,7 +27,7 @@ const observer = new IntersectionObserver(
   }
 );
 
-const pixabayAPI = new PixabayAPI(40);
+const pixabayAPI = new PixabayAPI(DEFAULT_PER_PAGE);
 
 form.addEventListener('submit', handleSubmit);
 async function handleSubmit(event) {
@@ -41,8 +43,14 @@ async function handleSubmit(event) {
   try {
     const response = await pixabayAPI.getPhotos();
 
-    if (response.data.total) {
-      Notify.success(` we find ${Math.ceil(response.data.total / 40)} page`);
+    if (response.data.totalHits) {
+      let totalMax = 13 * DEFAULT_PER_PAGE;
+
+      if (response.data.total / DEFAULT_PER_PAGE >= 13) {
+        Notify.success(` we find ${totalMax} photos`);
+      } else {
+        Notify.success(` we find  ${response.data.totalHits} photos`);
+      }
     } else {
       Notify.failure(`Sorry! We didn't find your query. Please, try again.`);
     }
@@ -69,7 +77,10 @@ async function loadMoreData() {
       const response = await pixabayAPI.getPhotos();
       list.insertAdjacentHTML('beforeend', createMarkUp(response.data.hits));
 
-      if (Math.ceil(response.data.total / 40) === pixabayAPI.page) {
+      if (
+        Math.ceil(response.data.totalHits / DEFAULT_PER_PAGE) ===
+        pixabayAPI.page
+      ) {
         observer.unobserve(anchor);
         return Notify.success('The end of search.');
       }
